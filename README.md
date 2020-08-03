@@ -1,76 +1,88 @@
-## An example BIDS App (template repository)
-Every BIDS App needs to follow a minimal set of command arguments common across
-all of the Apps. This allows users and developers to easily use and integrate
-BIDS Apps with their environment.
+# BIDS wrapper for nicMSlesions
+#### Docker Hub image tags
+Listed [here](https://hub.docker.com/r/pennsive/nicmslesions/tags)
+- gpu: requires `nvidia-docker` or singularity `--nv` flag (preferred)
+- cpu: CPU-only, also latest tag (works everywhere)
+- gui: noVNC (CPU only)
+## Usage
+```
+usage:  [-h] [--skip_bids_validator] [--t1_tag [T1_TAG]]
+        [--flair_tag [FLAIR_TAG]]
+        [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
+        [--model_name [MODEL_NAME]] [--t_bin [T_BIN]] [--l_min [L_MIN]]
+        [--min_error [MIN_ERROR]]
+        [--fraction_negatives [FRACTION_NEGATIVES]]
+        [--register [REGISTER]] [--denoise [DENOISE]]
+        [--denoise_iter [DENOISE_ITER]] [--skull_strip [SKULL_STRIP]]
+        [--save_tmp [SAVE_TMP]] [--debug [DEBUG]] [-v]
+        input_dir output_dir {train,infer}
 
-This is a minimalist example of a BIDS App consisting of a Dockerfile and a simple
-entry point script (written in this case in Python) accepting the standard BIDS
-Apps command line arguments. This repository can be used as a template for new BIDS Apps.
+positional arguments:
+  input_dir             The directory with the input dataset formatted
+                        according to the BIDS standard (if t1 and flair tags
+                        are not provided).
+  output_dir            The directory where the output files should be stored.
+                        If you are running group level analysis this folder
+                        should be prepopulated with the results of
+                        theparticipant level analysis.
+  {train,infer}         train or infer
 
-For more information about the specification of BIDS Apps see [here](https://docs.google.com/document/d/1E1Wi5ONvOVVnGhj21S1bmJJ4kyHFT7tkxnV3C23sjIE/).
+optional arguments:
+  -h, --help            show this help message and exit
+  --skip_bids_validator
+                        Whether or not to perform BIDS dataset validation
+  --t1_tag [T1_TAG]     T1 image file name if not using BIDS
+  --flair_tag [FLAIR_TAG]
+                        Flair image file name if not using BIDS
+  --participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]
+                        The label(s) of the participant(s) that should be
+                        analyzed. The label corresponds to
+                        sub-<participant_label> from the BIDS spec (so it does
+                        not include "sub-"). If this parameter is not provided
+                        all subjects should be analyzed. Multiple participants
+                        can be specified with a space separated list.
+  --model_name [MODEL_NAME]
+                        Optional model name
+  --t_bin [T_BIN]       Threshold to binarize the output segmentations
+  --l_min [L_MIN]       Minimum lesion volume
+  --min_error [MIN_ERROR]
+                        Minimum accuracy for computed lesion volume
+  --fraction_negatives [FRACTION_NEGATIVES]
+                        Fraction negatives
+  --register [REGISTER]
+                        Register modalities
+  --denoise [DENOISE]   Denoise input
+  --denoise_iter [DENOISE_ITER]
+                        Denoise iterations
+  --skull_strip [SKULL_STRIP]
+                        Skull strip input
+  --save_tmp [SAVE_TMP]
+                        Save intermediate steps
+  --debug [DEBUG]       Save debug output
+  -v, --version         show program's version number and exit
+```
+## Examples
+#### Run inference
+```
+# with BIDS dataset (single subject)
+docker run -v ~/Downloads/ds000001-download:/in:ro -v $PWD/out:/out pennsive/nicmslesions /in /out infer --participant_label 01 --model_name baseline_2ch
 
-### Description
-This is a placeholder for a short description explaining to the user what your App will doing.
+# with any two images
+docker run -v ~/Downloads/ds000001-download/sub-01/anat:/in:ro -v $PWD/out:/out pennsive/nicmslesions /in /out infer --t1_tag T1 --flair_tag T2 --model_name baseline_2ch
 
-### Documentation
-Provide a link to the documentation of your pipeline.
-
-### How to report errors
-Provide instructions for users on how to get help and report errors.
-
-### Acknowledgments
-Describe how would you would like users to acknowledge use of your App in their papers (citation, a paragraph that can be copy pasted, etc.)
-
-### Usage
-This App has the following command line arguments:
-
-		usage: run.py [-h]
-		              [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]]
-		              bids_dir output_dir {participant,group}
-
-		Example BIDS App entry point script.
-
-		positional arguments:
-		  bids_dir              The directory with the input dataset formatted
-		                        according to the BIDS standard.
-		  output_dir            The directory where the output files should be stored.
-		                        If you are running a group level analysis, this folder
-		                        should be prepopulated with the results of
-		                        the participant level analysis.
-		  {participant,group}   Level of the analysis that will be performed. Multiple
-		                        participant level analyses can be run independently
-		                        (in parallel).
-
-		optional arguments:
-		  -h, --help            show this help message and exit
-		  --participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL ...]
-		                        The label(s) of the participant(s) that should be
-		                        analyzed. The label corresponds to
-		                        sub-<participant_label> from the BIDS spec (so it does
-		                        not include "sub-"). If this parameter is not provided
-		                        all subjects will be analyzed. Multiple participants
-		                        can be specified with a space separated list.
-
-To run it in participant level mode (for one participant):
-
-    docker run -i --rm \
-		-v /Users/filo/data/ds005:/bids_dataset:ro \
-		-v /Users/filo/outputs:/outputs \
-		bids/example \
-		/bids_dataset /outputs participant --participant_label 01
-
-After doing this for all subjects (potentially in parallel), the group level analysis
-can be run:
-
-    docker run -i --rm \
-		-v /Users/filo/data/ds005:/bids_dataset:ro \
-		-v /Users/filo/outputs:/outputs \
-		bids/example \
-		/bids_dataset /outputs group
-
-### Special considerations
-Describe whether your app has any special requirements. For example:
-
-- Multiple map reduce steps (participant, group, participant2, group2 etc.)
-- Unusual memory requirements
-- etc.
+# on the cluster with singularity
+qsub -l h_vmem=32G -l V100 -b y -cwd \
+singularity run --nv -B $PWD/ds000001-download:/in:ro -v $PWD/out:/out nicmslesions_gpu.sif \
+/in /out infer --participant_label 01 --model_name baseline_2ch
+```
+If your data is not in BIDS you can provide the `--t1_tag` and `--flair_tag` to specify individual files as input
+#### Run training (not yet BIDSified)
+```
+qsub -l h_vmem=64G -l V100 -b y -cwd \
+singularity exec --nv -B ~/lesion_seg_training:/data -B ~/repos/nicMSlesions:/root/nicMSlesions/ -B /usr/local/cuda-9.0 nicmslesions_gpu.sif \
+python /root/nicMSlesions/nic_train_network_batch.py
+```
+#### Run GUI
+```
+docker run --name MSlesions -v $PWD:/data --rm -d -p 6080:80 pennsive/nicmslesions:gui
+```

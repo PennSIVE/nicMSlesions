@@ -108,7 +108,7 @@ def load_options(default_config, user_config):
                                                                  'fraction_negatives')
     options['num_layers'] = None
 
-    for env_key in ['train_folder', 'test_folder', 'output_folder']:
+    for env_key in ['train_folder', 'test_folder', 'pretrained_model', 'fract_negative_positive', 't_bin', 'l_min', 'min_error', 'register_modalities', 'denoise', 'denoise_iter', 'skull_stripping', 'save_tmp', 'debug']:
         if env_key in os.environ:
             print "setting " +env_key+" to " + os.environ.get(env_key)
             options[env_key] = os.environ.get(env_key)
