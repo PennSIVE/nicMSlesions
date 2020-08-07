@@ -108,9 +108,9 @@ def load_options(default_config, user_config):
                                                                  'fraction_negatives')
     options['num_layers'] = None
 
-    for env_key in ['train_folder', 'test_folder', 'pretrained_model', 'fract_negative_positive', 't_bin', 'l_min', 'min_error', 'register_modalities', 'denoise', 'denoise_iter', 'skull_stripping', 'save_tmp', 'debug']:
+    for env_key in ['train_folder', 'test_folder', 'pretrained_model', 'experiment', 'fract_negative_positive', 't_bin', 'l_min', 'min_error', 'register_modalities', 'denoise', 'denoise_iter', 'skull_stripping', 'save_tmp', 'debug']:
         if env_key in os.environ:
-            print "setting " +env_key+" to " + os.environ.get(env_key)
+            print "setting " + env_key+" to " + os.environ.get(env_key)
             options[env_key] = os.environ.get(env_key)
 
     options = parse_values_to_types(options)
@@ -125,10 +125,15 @@ def parse_values_to_types(options):
     keys = options.keys()
     for k in keys:
         value = options[k]
-        if value == 'True':
-            options[k] = True
-        if value == 'False':
-            options[k] = False
+        if isinstance(value, basestring):
+            if value == 'True':
+                options[k] = True
+            elif value == 'False':
+                options[k] = False
+            elif value.isdigit():
+                options[k] = int(value)
+            elif value.replace('.', '', 1).isdigit():
+                options[k] = float(value)
 
     return options
 
